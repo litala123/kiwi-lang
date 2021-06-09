@@ -20,6 +20,7 @@ https://www.rust-lang.org/tools/install
 
 (macOS and Linux):
 Run this command in a terminal and follow the instructions:
+
 `curl https://sh.rustup.rs -sSf | sh`
 
 &nbsp;
