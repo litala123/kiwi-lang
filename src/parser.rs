@@ -5,7 +5,6 @@ pub fn id_nonid_parser(i: &str) -> nom::IResult<&str, &str> {
 }
 
 pub fn identifier_parser(i: &str) -> nom::IResult<&str, &str> {
-    println!("in ID parser................");
     nom::combinator::recognize(
         nom::sequence::pair(
             nom::branch::alt((nom::character::complete::alpha1, nom::bytes::complete::tag("_"))),
@@ -17,12 +16,22 @@ pub fn identifier_parser(i: &str) -> nom::IResult<&str, &str> {
 }
 
 pub fn non_identifier_parser(i: &str) -> nom::IResult<&str, &str> {
-    println!("in non ID parser||||||||||||");
     nom::combinator::recognize(
         nom::sequence::pair(
             nom::character::complete::none_of("QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm_"),
             nom::multi::many0(
                 nom::character::complete::none_of(" \t\r\n")
+            )
+        )
+    )(i)
+}
+
+pub fn integer_literal_parser(i: &str) -> nom::IResult<&str, &str> {
+    nom::combinator::recognize(
+        nom::sequence::pair(
+            nom::character::complete::digit1,
+            nom::branch::alt(
+                (nom::character::complete::one_of("iu"), nom::combinator::success('i'))
             )
         )
     )(i)

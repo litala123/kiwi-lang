@@ -4,6 +4,21 @@ mod tests {
     use crate::parser;
     use test_case::test_case;
     
+    #[test_case("1", true; "Single digit")]
+    #[test_case("12345678901234567890", true; "Many digits")]
+    #[test_case("x", false; "Character")]
+    #[test_case("123i", true; "Digits then 'i' character")]
+    #[test_case("123u", true; "Digits then 'u' character")]
+    #[test_case("123x", false; "Digits then invalid character")]
+    #[test_case("123uu", false; "Digits then multiple 'u' characters")]
+    #[test_case("12.3", false; "Digits with decimal point")]
+    pub fn test_string_is_integer_literal(test_str: &str, should_pass: bool) {
+        
+        let result = nom::exact!(test_str, parser::integer_literal_parser);
+        
+        assert_eq!(should_pass, result.is_ok());
+    }
+    
     #[test_case("x", true; "Single letter")]
     #[test_case("1", false; "Single digit")]
     #[test_case("_", true; "Single underscore")]
