@@ -1,5 +1,7 @@
 use std::env;
 use std::process;
+mod tests;
+mod parser;
 
 enum ArgParseStates {
     General,
