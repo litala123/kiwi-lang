@@ -3,11 +3,16 @@ name = "kiwi-lang"
 version = "0.1.0"
 authors = ["litala123 <litala@rpi.edu>"]
 edition = "2018"
+build = "build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[build-dependencies] # <-- We added this and everything after!
+lalrpop = "0.19.6"
+
 [dependencies]
-nom = "6.0"
+lalrpop-util = "0.19.6"
+regex = "1"
 
 [dev-dependencies]
 test-case = "1.1.0"

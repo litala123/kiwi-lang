@@ -1,0 +1,12 @@
+use std::str::FromStr;
+
+grammar;
+
+pub I32Literal: i32 = {
+    r"[0-9]+" => i32::from_str(<>).unwrap(),
+    <i:r"[0-9]+i"> => i32::from_str(&i[..i.len()-1]).unwrap(),
+}
+
+pub U32Literal: u32 = {
+    <u:r"[0-9]+u"> => u32::from_str(&u[..u.len()-1]).unwrap(),
+}

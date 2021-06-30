@@ -1,7 +1,10 @@
 use std::env;
 use std::process;
+#[cfg(test)]
 mod tests;
-mod parser;
+
+#[macro_use] extern crate lalrpop_util;
+lalrpop_mod!(pub parser);
 
 enum ArgParseStates {
     General,
@@ -55,5 +58,12 @@ fn main() {
         print!("\t{}\n", s);
     }
 
-    println!("\nOutput file:\n\t{}", out_file);
+    println!("\nOutput file:\n\t{}\n", out_file);
+    
+    // parser
+    let res = parser::I32LiteralParser::new().parse("123");
+    match res {
+        Ok(_) => println!("Parsing completed with no errors"),
+        Err(_) => println!("There was a parsing error"),
+    }
 }
