@@ -55,10 +55,13 @@ fn output_function(
         match arg.as_rule() {
             Rule::fd_arg => {
                 let mut inner_rules = arg.into_inner();
+                let arg_name = inner_rules.next().unwrap().as_str();
+                inner_rules.next();
+                let arg_type = inner_rules.next().unwrap().as_str();
 
                 args.push((
-                    inner_rules.next().unwrap().as_str(),
-                    inner_rules.next().unwrap().as_str(),
+                    arg_name,
+                    arg_type,
                 ) as (&str, &str));
 
                 *pc += 4;
@@ -72,12 +75,12 @@ fn output_function(
 
     for i in 0..args.len() {
         for j in i + 1..args.len() {
-            if args[i].1.eq(args[j].1) {
+            if args[i].0.eq(args[j].0) {
                 return Err(std::io::Error::new(
                     std::io::ErrorKind::Other,
                     format!(
                         "Found duplicated argument name in {}: {}",
-                        func_name, args[i].1
+                        func_name, args[i].0
                     ),
                 ));
             }

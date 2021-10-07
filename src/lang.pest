@@ -92,7 +92,7 @@ stmt = {
     (func_call ~ SEMI)
 }
 
-fd_arg = { var_type ~ ident }
+fd_arg = { ident ~ COLON ~ var_type }
 fc_arg = { expr }
 
 fd_arg_list = { (fd_arg ~ (COMMA ~ fd_arg)*)? }
