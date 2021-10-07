@@ -1,0 +1,97 @@
+WHITESPACE = _{ " " | "\t" | NEWLINE }
+
+LPAREN = @{ "(" }
+RPAREN = @{ ")" }
+LSQUARE = @{ "[" }
+RSQUARE = @{ "]" }
+LBRACK = @{ "{" }
+RBRACK = @{ "}" }
+
+PLUS = @{ "+" }
+MIN = @{ "-" }
+MULT = @{ "*" }
+DIV = @{ "/" }
+MOD = @{ "%" }
+NOT = @{ "!" }
+
+ASSIGN = @{ "=" }
+ASSIGN_PLUS = @{ "+=" }
+ASSIGN_MIN = @{ "-=" }
+ASSIGN_MULT = @{ "*=" }
+ASSIGN_DIV = @{ "/=" }
+
+EQUALS = @{ "==" }
+NEQUALS = @{ "!=" }
+GT = @{ ">" }
+GTE = @{ ">=" }
+LT = @{ "<" }
+LTE = @{ "<=" }
+OR = @{ "||" }
+AND = @{ "&&" }
+
+SQUOTE = @{ "'" }
+DQUOTE = @{ "\"" }
+BACK_TICK = @{ "`" }
+
+SEMI = @{ ";" }
+PERIOD = @{ "." }
+COMMA = @{ "," }
+UNDERSCORE = @{ "_" }
+
+LET_K = @{ "let" }
+FUN_K = @{ "fn" }
+IMPORT_K = @{ "import" }
+RET_K = @{ "return" }
+STRUCT_K = @{ "struct" }
+LOOP_K = @{ "loop" }
+
+INT_T = @{ "int" }
+FLOAT_T = @{ "float" }
+BOOL_T = @{ "bool" }
+STRING_T = @{ "string" }
+
+ident = @{ !ASCII_DIGIT ~ (ASCII_ALPHANUMERIC | UNDERSCORE)+ }
+
+var_type = { INT_T | FLOAT_T | BOOL_T | STRING_T | (STRUCT_K ~ ident) }
+
+arith_op = { PLUS | MIN | MULT | DIV | MOD }
+log_op = { EQUALS | NEQUALS | GT | GTE | LT | LTE | OR | AND }
+assign_op = { ASSIGN | ASSIGN_PLUS | ASSIGN_MIN | ASSIGN_MULT | ASSIGN_DIV }
+
+int_specifier = @{ "i" | "u" }
+
+int_literal = ${ MIN? ~ ASCII_DIGIT+ ~ int_specifier? }
+float_literal = ${ MIN? ~ ASCII_DIGIT+ ~ PERIOD ~ ASCII_DIGIT+ ~ ("f")? }
+string_literal = ${
+    (SQUOTE ~ (!SQUOTE ~ ANY)* ~ SQUOTE) |
+    (DQUOTE ~ (!DQUOTE ~ ANY)* ~ DQUOTE) |
+    (BACK_TICK ~ (!BACK_TICK ~ ANY)* ~ BACK_TICK)
+}
+
+expr = {
+    (LPAREN ~ expr ~ RPAREN) |
+    (NOT ~ expr) |
+    (ident ~ arith_op ~ expr) |
+    (ident ~ log_op ~ expr) |
+    ident |
+    int_literal |
+    float_literal |
+    string_literal
+}
+
+stmt = {
+    (LET_K ~ ident ~ assign_op ~ expr ~ SEMI) |
+    (RET_K ~ expr ~ SEMI)
+}
+
+arg = { var_type ~ ident }
+
+arg_list = { (arg ~ (COMMA ~ arg)*)? }
+
+func = {
+    FUN_K ~ ident ~ LPAREN ~ arg_list ~ RPAREN ~ LBRACK ~ stmt* ~ RBRACK
+}
+
+import_stmt = { IMPORT_K ~ string_literal ~ SEMI }
+
+file = { SOI ~ import_stmt* ~ func* ~ EOI }
