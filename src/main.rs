@@ -53,7 +53,7 @@ fn output_function(
 
     for arg in arg_list.into_inner() {
         match arg.as_rule() {
-            Rule::arg => {
+            Rule::fd_arg => {
                 let mut inner_rules = arg.into_inner();
 
                 args.push((
@@ -109,6 +109,17 @@ fn output_function(
                         inner_rules.next();
                         gen_file.write_all(
                             format!("\treturn {}\n", inner_rules.next().unwrap().as_str())
+                                .as_bytes(),
+                        )?;
+                    }
+                    Rule::func_call => {
+                        let mut fc = inner_rules.next().unwrap().into_inner();
+                        let fc_name = fc.next().unwrap().as_str();
+                        fc.next();
+                        let fc_args = fc.next().unwrap().as_str();
+                        
+                        gen_file.write_all(
+                            format!("\tcall __func_{} ( {} )\n", fc_name, fc_args)
                                 .as_bytes(),
                         )?;
                     }
@@ -199,7 +210,7 @@ fn main() -> std::io::Result<()> {
             Rule::import_stmt => {
                 output_import(i, &mut gen_file)?;
             }
-            Rule::func => {
+            Rule::func_decl => {
                 if !in_text {
                     gen_file.write_all(b"\t.text\n")?;
                     in_text = true;

@@ -76,26 +76,32 @@ expr = {
     (ident ~ arith_op ~ expr) |
     (ident ~ log_op ~ expr) |
     ident |
-    int_literal |
     float_literal |
-    string_literal
+    int_literal |
+    string_literal |
+    func_call
 }
+
+func_call = { ident ~ LPAREN ~ fc_arg_list ~ RPAREN  }
 
 stmt = {
     (LET_K ~ ident ~ COLON ~ var_type ~ assign_op ~ expr ~ SEMI) |
     (LET_K ~ ident ~ ASSIGN_DECL ~ expr ~ SEMI) |
     (ident ~ assign_op ~ expr ~ SEMI) |
-    (RET_K ~ expr ~ SEMI)
+    (RET_K ~ expr ~ SEMI) |
+    (func_call ~ SEMI)
 }
 
-arg = { var_type ~ ident }
+fd_arg = { var_type ~ ident }
+fc_arg = { expr }
 
-arg_list = { (arg ~ (COMMA ~ arg)*)? }
+fd_arg_list = { (fd_arg ~ (COMMA ~ fd_arg)*)? }
+fc_arg_list = { (fc_arg ~ (COMMA ~ fc_arg)*)? }
 
-func = {
-    FUN_K ~ ident ~ LPAREN ~ arg_list ~ RPAREN ~ LBRACK ~ stmt* ~ RBRACK
+func_decl = {
+    FUN_K ~ ident ~ LPAREN ~ fd_arg_list ~ RPAREN ~ LBRACK ~ stmt* ~ RBRACK
 }
 
 import_stmt = { IMPORT_K ~ string_literal ~ SEMI }
 
-file = { SOI ~ import_stmt* ~ func* ~ EOI }
+file = { SOI ~ import_stmt* ~ func_decl* ~ EOI }
