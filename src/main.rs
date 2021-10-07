@@ -92,13 +92,21 @@ fn output_function(
             Rule::stmt => {
                 let mut inner_rules = i.into_inner();
 
-                match inner_rules.next().unwrap().as_rule() {
+                match inner_rules.peek().unwrap().as_rule() {
                     Rule::LET_K => {
+                        inner_rules.next();
                         gen_file.write_all(
                             format!("\tdecl {}\n", inner_rules.next().unwrap().as_str()).as_bytes(),
                         )?;
                     }
+                    Rule::ident => {
+                        gen_file.write_all(
+                            format!("\tassign {}\n", inner_rules.next().unwrap().as_str())
+                            .as_bytes(),
+                        )?;
+                    }
                     Rule::RET_K => {
+                        inner_rules.next();
                         gen_file.write_all(
                             format!("\treturn {}\n", inner_rules.next().unwrap().as_str())
                                 .as_bytes(),

@@ -15,6 +15,7 @@ MOD = @{ "%" }
 NOT = @{ "!" }
 
 ASSIGN = @{ "=" }
+ASSIGN_DECL = @{ ":=" }
 ASSIGN_PLUS = @{ "+=" }
 ASSIGN_MIN = @{ "-=" }
 ASSIGN_MULT = @{ "*=" }
@@ -34,6 +35,7 @@ DQUOTE = @{ "\"" }
 BACK_TICK = @{ "`" }
 
 SEMI = @{ ";" }
+COLON = @{ ":" }
 PERIOD = @{ "." }
 COMMA = @{ "," }
 UNDERSCORE = @{ "_" }
@@ -80,7 +82,9 @@ expr = {
 }
 
 stmt = {
-    (LET_K ~ ident ~ assign_op ~ expr ~ SEMI) |
+    (LET_K ~ ident ~ COLON ~ var_type ~ assign_op ~ expr ~ SEMI) |
+    (LET_K ~ ident ~ ASSIGN_DECL ~ expr ~ SEMI) |
+    (ident ~ assign_op ~ expr ~ SEMI) |
     (RET_K ~ expr ~ SEMI)
 }
 
