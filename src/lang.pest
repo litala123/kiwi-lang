@@ -51,6 +51,8 @@ INT_T = @{ "int" }
 FLOAT_T = @{ "float" }
 BOOL_T = @{ "bool" }
 STRING_T = @{ "string" }
+TRUE_K = @{ "true" }
+FALSE_K = @{ "false" }
 
 ident = @{ !ASCII_DIGIT ~ (ASCII_ALPHANUMERIC | UNDERSCORE)+ }
 
@@ -70,19 +72,36 @@ string_literal = ${
     (BACK_TICK ~ (!BACK_TICK ~ ANY)* ~ BACK_TICK)
 }
 
-expr = {
-    (LPAREN ~ expr ~ RPAREN) |
-    (NOT ~ expr) |
-    (ident ~ arith_op ~ expr) |
-    (ident ~ log_op ~ expr) |
+factor = { (LPAREN ~ arith_expr ~ RPAREN) | term }
+md_expr = { (factor ~ MULT ~ md_expr) | (factor ~ DIV ~ md_expr) | factor}
+arith_expr = { (md_expr ~ PLUS ~ arith_expr) | (md_expr ~ MIN ~ arith_expr) | md_expr }
+
+cond_factor = { (LPAREN ~ cond_expr ~ RPAREN) | term }
+lowest_expr = { (NOT ~ cond_factor) | cond_factor }
+and_expr = { (lowest_expr ~ AND ~ and_expr) | (lowest_expr ~ AND ~ and_expr) | lowest_expr}
+cond_expr = { (and_expr ~ OR ~ cond_expr) | (and_expr ~ OR ~ cond_expr) | and_expr }
+
+string_expr = {
+    (LPAREN ~ string_expr ~ RPAREN) |
+    (string_literal ~ PLUS ~ string_expr) |
+    string_literal
+}
+
+term = {
     ident |
     float_literal |
     int_literal |
-    string_literal |
     func_call
 }
 
-func_call = { ident ~ LPAREN ~ fc_arg_list ~ RPAREN  }
+expr = {
+    arith_expr |
+    cond_expr |
+    string_expr |
+    term
+}
+
+func_call = { ident ~ LPAREN ~ fc_arg_list ~ RPAREN }
 
 stmt = {
     (LET_K ~ ident ~ COLON ~ var_type ~ assign_op ~ expr ~ SEMI) |

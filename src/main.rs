@@ -33,12 +33,26 @@ fn output_import(
     Ok(())
 }
 
+fn output_data_string(data_strings: &mut Vec<String>, gen_file: &mut fs::File,) -> std::io::Result<()> {
+    
+    gen_file.write_all("\t.data\n".as_bytes())?;
+    for i in 0..data_strings.len() {
+        gen_file.write_all(data_strings[i].as_bytes())?;
+    }
+    
+    Ok(())
+}
+
 fn output_function(
     func: pest::iterators::Pair<Rule>,
     gen_file: &mut fs::File,
+    data_strings: &mut Vec<String>,
     pc: &mut u64,
 ) -> std::io::Result<()> {
     let mut func_inner_rules = func.into_inner();
+    
+    // let registers = ["$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7", "$t8", "$t9", "$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7", "$s8", "$s9"];
+    let registers = ["$t0", "$t1", "$s0", "$s1"];
 
     func_inner_rules.next(); // fn
     let func_name: &str = func_inner_rules.next().unwrap().as_str(); // function name
@@ -50,6 +64,7 @@ fn output_function(
     gen_file.write_all(format!("__func_{}:\n", func_name).as_bytes())?;
 
     let mut args = Vec::new();
+    let mut strings_in_func = 0;
 
     for arg in arg_list.into_inner() {
         match arg.as_rule() {
@@ -99,8 +114,25 @@ fn output_function(
                     Rule::LET_K => {
                         inner_rules.next();
                         gen_file.write_all(
-                            format!("\tdecl {}\n", inner_rules.next().unwrap().as_str()).as_bytes(),
+                            format!("\tdecl {}\n", inner_rules.next().unwrap().as_str()).as_bytes()
                         )?;
+                        
+                        match inner_rules.peek().unwrap().as_rule() {
+                            Rule::expr => {
+                                let mut temp1 = inner_rules.next().unwrap().into_inner();
+                                match temp1.peek().unwrap().as_rule() {
+                                    Rule::string_literal => {
+                                        let temp : String = temp1.next().unwrap().as_str().to_string();
+                                        data_strings.push(format!("{}-strlit-{}:\n\tasciiz \"{}\"\n", func_name, strings_in_func, temp[1..temp.len()-1].to_string()));
+                                        strings_in_func += 1;
+                                    }
+                                    _ => {
+                                    }
+                                }
+                            }
+                            _ => {
+                            }
+                        }
                     }
                     Rule::ident => {
                         gen_file.write_all(
@@ -119,12 +151,76 @@ fn output_function(
                         let mut fc = inner_rules.next().unwrap().into_inner();
                         let fc_name = fc.next().unwrap().as_str();
                         fc.next();
-                        let fc_args = fc.next().unwrap().as_str();
+                        let fc_args = fc.next().unwrap();
+                        let fc_arg_strs = fc_args.as_str();
+                        let fc_args = fc_args.into_inner();
+                        let mut fc_arg_count = 0;
                         
+                        for arg in fc_args.clone() {
+                            match arg.as_rule() {
+                                Rule::fc_arg => {
+                                    // println!("arg {}", arg.as_str());
+                                    fc_arg_count += 1;
+                                },
+                                _ => {}
+                            }
+                        }
+                        
+                        let frame_size = registers.len() * 4 + fc_arg_count * 4 + 8;
+                        let mut bytes = 0;
+                        
+                        /*
+                        
+                        
+                        sub $sp, $sp, frame_size      # set new stack pointer
+                        # store all the arguments
+                        # store all the sX and tX registers (b bytes)
+                        sw $ra, 8($sp)      # save return address in stack
+                        sw $fp, 4($sp)      # save old frame pointer in stack
+                        add $fp, $sp, b + 8      # set new frame pointer
+                        
+                        */
+                        // sub $sp, $sp, frame_size      # set new stack pointer
                         gen_file.write_all(
-                            format!("\tcall __func_{} ( {} )\n", fc_name, fc_args)
+                            format!("\tsub $sp, $sp, {}\n", frame_size)
                                 .as_bytes(),
                         )?;
+                        // store all the arguments
+                        for arg in fc_args {
+                            match arg.as_rule() {
+                                Rule::fc_arg => {
+                                    gen_file.write_all(
+                                        format!("\tsw $sp, {}(%expr value% {})\n", frame_size - bytes, arg.as_str())
+                                            .as_bytes(),
+                                    )?;
+                                    bytes += 4;
+                                },
+                                _ => {}
+                            }
+                        }
+                        // store all the sX and tX registers
+                        for reg in &registers {
+                            gen_file.write_all(
+                                format!("\tsw $sp, {}({})\n", frame_size - bytes, reg)
+                                    .as_bytes(),
+                            )?;
+                            bytes += 4;
+                        }
+                        // sw $ra, 8($sp)           # save return address in stack
+                        // sw $fp, 4($sp)           # save old frame pointer in stack
+                        // add $fp, $sp, b + 8      # set new frame pointer
+                        gen_file.write_all(
+                            format!("\tsw $ra, 8($sp)\n\tsw $fp, 4($sp)\n\tadd $fp, $sp, {}\n\tjal __func_{} ( {} )\n\tsub $fp, $sp, {}\n\tlw $fp, 4($sp)\n\tlw $ra, 8($sp)\n", frame_size, fc_name, fc_arg_strs, frame_size)
+                                .as_bytes(),
+                        )?;
+                        // store all the sX and tX registers
+                        for reg in &registers {
+                            gen_file.write_all(
+                                format!("\tlw {}, {}($sp)\n", reg, frame_size - bytes)
+                                    .as_bytes(),
+                            )?;
+                            bytes -= 4;
+                        }
                     }
                     Rule::EOI => (),
                     _ => unreachable!(),
@@ -140,6 +236,16 @@ fn output_function(
     }
 
     Ok(())
+}
+
+fn print_tree(top: pest::iterators::Pair<Rule>, indent: u32) {
+    for _ in 0..indent {
+        print!("  ");
+    }
+    println!("{:?}\t{}", top.as_rule(), top.as_str());
+    for rule in top.into_inner() {
+        print_tree(rule, indent + 1);
+    }
 }
 
 fn main() -> std::io::Result<()> {
@@ -207,7 +313,13 @@ fn main() -> std::io::Result<()> {
     let mut pc: u64 = 0;
     
     let mut in_text = false;
-
+    
+    let mut data_strings: Vec<String> = vec![];
+    
+    println!("Printing parsed tree from {}", file_string.clone());
+    print_tree(file.clone(), 0);
+    println!("\n\n\n");
+    
     for i in file.into_inner() {
         match i.as_rule() {
             Rule::import_stmt => {
@@ -218,7 +330,7 @@ fn main() -> std::io::Result<()> {
                     gen_file.write_all(b"\t.text\n")?;
                     in_text = true;
                 }
-                match output_function(i, &mut gen_file, &mut pc) {
+                match output_function(i, &mut gen_file, &mut data_strings, &mut pc) {
                     Ok(_) => (),
                     Err(e) => {
                         eprintln!("ERROR: {}", e);
@@ -230,6 +342,8 @@ fn main() -> std::io::Result<()> {
             _ => unreachable!(),
         }
     }
+    
+    output_data_string(&mut data_strings, &mut gen_file).unwrap();
 
     println!("FINISHED ANALYSIS");
 
